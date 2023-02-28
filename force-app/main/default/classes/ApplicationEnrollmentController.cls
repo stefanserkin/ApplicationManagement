@@ -8,6 +8,7 @@ public with sharing class ApplicationEnrollmentController {
             SELECT Id, 
                    Name, 
                    Application_Status__c, 
+                   Application_Date_Time__c, 
                    CreatedDate, 
                    TREX1__Registration__c, 
                    TREX1__Contact__c, 
@@ -24,7 +25,7 @@ public with sharing class ApplicationEnrollmentController {
              WHERE TREX1__Course_Option__c = :recordId 
                AND Application_Status__c != null 
               WITH SECURITY_ENFORCED 
-             ORDER BY CreatedDate ASC 
+             ORDER BY Application_Date_Time__c ASC 
              LIMIT 10000
         ];
     }

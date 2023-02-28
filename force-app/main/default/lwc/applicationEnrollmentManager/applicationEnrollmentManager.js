@@ -15,7 +15,7 @@ const STATUSES = ['New','Under Review','Pending Confirmation','Approved','Reject
 
 /* Answered question datatable columns for modal */
 const AQCOLS = [
-	{ label: 'Question', fieldName: 'TREX1__Question__c', type: 'text', editable: true, hideDefaultActions: true, wrapText: true },
+	{ label: 'Question', fieldName: 'TREX1__Question__c', type: 'text', hideDefaultActions: true, wrapText: true },
 	{ label: 'Answer', fieldName: 'TREX1__Answer__c', type: 'text', editable: true, hideDefaultActions: true, wrapText: true },
 ];
 
@@ -40,11 +40,14 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
 	aqcols = AQCOLS;
 
 	wiredApplications = [];
+	draftValues = [];
 	allApplications;
 	apps;
 
 	selectedApp;
 	answeredQuestions = [];
+
+	selectedRegistrationId;
 
 	/* Constructor */
 
@@ -59,17 +62,16 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
 				}
 			},
 			{ label: 'Status', fieldName: 'Application_Status__c', type: 'text', initialWidth: 150, hideDefaultActions: true },
-			{ label: 'Date Submitted', fieldName: 'CreatedDate', type: 'date', initialWidth: 200, 
+			{ label: 'Application Date/Time', fieldName: 'Application_Date_Time__c', type: 'date', initialWidth: 200, 
 				typeAttributes: {
 					day: 'numeric',
 					month: 'short',
 					year: 'numeric',
 					hour: '2-digit',
 					minute: '2-digit',
-					second: '2-digit',
 					hour12: true
 				}, 
-				sortable: false
+				editable: true, sortable: false
 			},
             { type: 'action', typeAttributes: { rowActions: this.getRowActions } },
         ];
@@ -165,6 +167,46 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
         }
     }
 
+	/* Datatable edit - save */
+	async handleSave(event) {
+        // Convert datatable draft values into record objects
+        const records = event.detail.draftValues.slice().map((draftValue) => {
+            const fields = Object.assign({}, draftValue);
+            return { fields };
+        });
+
+        // Clear all datatable draft values
+        this.draftValues = [];
+
+        try {
+            // Update all records in parallel thanks to the UI API
+            const recordUpdatePromises = records.map((record) =>
+                updateRecord(record)
+            );
+            await Promise.all(recordUpdatePromises);
+
+            // Report success with a toast
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title: 'Success',
+                    message: 'Records updated',
+                    variant: 'success'
+                })
+            );
+
+            // Display fresh data in the datatable
+            await refreshApex(this.wiredApplications);
+        } catch (error) {
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title: 'Error updating or reloading records',
+                    message: error.body.message,
+                    variant: 'error'
+                })
+            );
+        }
+    }
+
 	/* Row actions */
 
 	handleRowAction(event) {
@@ -242,11 +284,25 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
 	}
 
 	viewApplication(registrationId) {
+		this.selectedRegistrationId = registrationId;
 		getAnsweredQuestions({ recordId: registrationId })
             .then((result) => {
                 this.answeredQuestions = result;
                 this.error = undefined;
 				this.showModal = true;
+            })
+            .catch((error) => {
+                this.error = error;
+                this.answeredQuestions = undefined;
+            });
+	}
+
+	refreshApplication() {
+		console.log(':::: refreshing application');
+		getAnsweredQuestions({ recordId: this.selectedRegistrationId })
+            .then((result) => {
+                this.answeredQuestions = result;
+                this.error = undefined;
             })
             .catch((error) => {
                 this.error = error;
@@ -323,6 +379,7 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
 	}
 
 	refreshComponent() {
+		console.log(':::: is refreshed');
 		refreshApex(this.wiredApplications);
 	}
 
