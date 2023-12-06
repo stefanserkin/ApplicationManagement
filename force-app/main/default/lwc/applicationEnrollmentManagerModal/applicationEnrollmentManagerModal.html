@@ -12,7 +12,7 @@
                 </button>
                 <label></label>
                 <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
-                    {app.applicantName}'s Application&nbsp;
+                    {app.applicantName}'s Application | <lightning-formatted-date-time value={app.Application_Date_Time__c}></lightning-formatted-date-time>
                     <lightning-icon if:true={app.isMember}
                         icon-name="standard:team_member"
                         alternative-text="member"
@@ -22,25 +22,33 @@
                 </h2>
             </header>
             <div class="slds-modal__content slds-var-p-around_medium" id="modal-content-id-1">
-                <p class="slds-text-heading_small slds-var-m-around_medium">
-                    <strong>Date Submitted</strong>  &nbsp; <br /> 
-                    <lightning-formatted-date-time 
-                        value={app.Application_Date_Time__c}
-                    ></lightning-formatted-date-time>
-                </p>
-                <p class="slds-text-heading_small slds-var-m-around_medium">
+                <p class="slds-text-heading_small slds-align_absolute-center slds-var-m-around_medium">
                     <lightning-formatted-rich-text
                         value={contactInfo}
                     ></lightning-formatted-rich-text>
                 </p>
-				<lightning-datatable
-					key-field="Id"
-					data={answeredQuestions}
-					columns={aqcols}
-                    onsave={handleSave}
-                    draft-values={draftValues}
-                    wrap-text-max-lines="3"
-				></lightning-datatable>
+                <!-- LIGHTNING SPINNER ON LOAD -->
+                <template if:true={isLoading}>
+                    <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+                </template>
+                <!-- ANSWERED QUESTIONS DATATABLE -->
+                <div if:false={isLoading}>
+                    <template if:true={isEditMode}>
+                        <div class="slds-text-color_success slds-align_absolute-center">
+                            <p>{editModeMessage}</p>
+                        </div>
+                    </template>
+                    <lightning-datatable
+                        key-field="Id"
+                        data={answers}
+                        columns={aqcols}
+                        oncellchange={toggleEditMode}
+                        oncancel={toggleEditMode}
+                        onsave={handleSave}
+                        draft-values={draftValues}
+                        wrap-text-max-lines="3"
+                    ></lightning-datatable>
+                </div>
             </div>
             <footer class="slds-modal__footer">
                 <template if:true={app.showModalActions}>

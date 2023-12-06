@@ -24,6 +24,7 @@ public with sharing class ApplicationEnrollmentController {
               FROM TREX1__Course_Option_Enrollment__c 
              WHERE TREX1__Course_Option__c = :recordId 
                AND Application_Status__c != null 
+               AND TREX1__Status__c NOT IN ('Draft','Withdrawn')
               WITH SECURITY_ENFORCED 
              ORDER BY Application_Date_Time__c ASC 
              LIMIT 10000

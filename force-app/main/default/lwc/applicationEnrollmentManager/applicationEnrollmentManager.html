@@ -11,12 +11,11 @@
         <c-application-enrollment-manager-modal
             modal-header={modalHeader}
 			app={selectedApp}
-            registration-id={answeredQuestions}
+            registration-id={selectedRegistrationId}
 			aqcols={aqcols}
             onclose={handleModalClose}
 			onreject={handleModalReject}
 			onoffer={handleModalOffer}
-			onrefresh={refreshApplication}
         ></c-application-enrollment-manager-modal>
     </template>
 

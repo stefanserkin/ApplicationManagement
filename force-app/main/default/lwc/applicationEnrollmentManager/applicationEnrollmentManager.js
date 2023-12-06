@@ -5,7 +5,6 @@ import { refreshApex } from '@salesforce/apex';
 import { updateRecord } from 'lightning/uiRecordApi';
 
 import getApplications from '@salesforce/apex/ApplicationEnrollmentController.getApplications';
-import getAnsweredQuestions from '@salesforce/apex/ApplicationEnrollmentController.getAnsweredQuestions';
 
 import ID_FIELD from '@salesforce/schema/TREX1__Course_Option_Enrollment__c.Id';
 import STATUS_FIELD from '@salesforce/schema/TREX1__Course_Option_Enrollment__c.Application_Status__c';
@@ -139,11 +138,11 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
 				}
 
 				if (dataParse.TREX1__Transaction__r.TREX1__Contact__r.Email != null) {
-					contactInfo += '<br/>' + dataParse.TREX1__Transaction__r.TREX1__Contact__r.Email;
+					contactInfo += ' | ' + dataParse.TREX1__Transaction__r.TREX1__Contact__r.Email;
 				}
 
 				if (dataParse.TREX1__Transaction__r.TREX1__Contact__r.Phone != null) {
-					contactInfo += '<br/>' + dataParse.TREX1__Transaction__r.TREX1__Contact__r.Phone;
+					contactInfo += ' | ' + dataParse.TREX1__Transaction__r.TREX1__Contact__r.Phone;
 				}
 				dataParse.transactionContactInfo = contactInfo;
 				dataParse.isMember = dataParse.TREX1__Contact__r.Contact_Type__c === 'Member';
@@ -169,6 +168,8 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
 
 	/* Datatable edit - save */
 	async handleSave(event) {
+		this.isLoading = true;
+
         // Convert datatable draft values into record objects
         const records = event.detail.draftValues.slice().map((draftValue) => {
             const fields = Object.assign({}, draftValue);
@@ -196,6 +197,8 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
 
             // Display fresh data in the datatable
             await refreshApex(this.wiredApplications);
+			this.isLoading = false;
+			
         } catch (error) {
             this.dispatchEvent(
                 new ShowToastEvent({
@@ -204,6 +207,7 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
                     variant: 'error'
                 })
             );
+			this.isLoading = false;
         }
     }
 
@@ -285,29 +289,7 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
 
 	viewApplication(registrationId) {
 		this.selectedRegistrationId = registrationId;
-		getAnsweredQuestions({ recordId: registrationId })
-            .then((result) => {
-                this.answeredQuestions = result;
-                this.error = undefined;
-				this.showModal = true;
-            })
-            .catch((error) => {
-                this.error = error;
-                this.answeredQuestions = undefined;
-            });
-	}
-
-	refreshApplication() {
-		console.log(':::: refreshing application');
-		getAnsweredQuestions({ recordId: this.selectedRegistrationId })
-            .then((result) => {
-                this.answeredQuestions = result;
-                this.error = undefined;
-            })
-            .catch((error) => {
-                this.error = error;
-                this.answeredQuestions = undefined;
-            });
+		this.showModal = true;
 	}
 
 	goToRecord(rowId) {
@@ -379,7 +361,6 @@ export default class ApplicationEnrollmentManager extends NavigationMixin(Lightn
 	}
 
 	refreshComponent() {
-		console.log(':::: is refreshed');
 		refreshApex(this.wiredApplications);
 	}
 

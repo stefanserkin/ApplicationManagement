@@ -1,5 +1,5 @@
-import { LightningElement, api } from 'lwc';
-// import { refreshApex } from '@salesforce/apex';
+import { LightningElement, api, wire } from 'lwc';
+import { refreshApex } from '@salesforce/apex';
 import { updateRecord } from 'lightning/uiRecordApi';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getAnsweredQuestions from '@salesforce/apex/ApplicationEnrollmentController.getAnsweredQuestions';
@@ -7,54 +7,52 @@ import getAnsweredQuestions from '@salesforce/apex/ApplicationEnrollmentControll
 export default class ApplicationEnrollmentManagerModal extends LightningElement {
 	@api modalHeader;
     @api app;
-    // @api answeredQuestions;
+    @api aqcols;
     @api registrationId;
+    wiredAnswers = [];
+    draftValues = [];
+    answers;
 
-    // refresh when parent component data refreshes
-    /*
-    @api set objAqData(value) {
-        this.answeredQuestions = [...value];
-    }
-    get objAqData() {
-        return this.answeredQuestions;
-    }
-    answeredQuestions;
-    showFeedback = false;
-    connectedCallBack(){
-        this.answeredQuestions = Object.assign({},this.objAqData);
-    }
-    showFeedbacks(event){
-        this.showFeedback =  !this.showFeedback;
-    }
-    */
-    
-
-	@api aqcols;
-
-	draftValues = [];
+    isLoading = false;
+    error;
 
 	get contactInfo() {
-		return '<strong>Contact Information</strong><br />' + this.app.transactionContactInfo;
+		return '<strong>Contact Information</strong>: ' + this.app.transactionContactInfo;
 	}
 
 	get dateSubmittedHeader() {
 		return '<strong>Date Submitted</strong><br />';
 	}
 
-    handleRefreshApplication() {
-		console.log(':::: refreshing application');
-		getAnsweredQuestions({ recordId: this.selectedRegistrationId })
-            .then((result) => {
-                this.answeredQuestions = result;
-                this.error = undefined;
-            })
-            .catch((error) => {
-                this.error = error;
-                this.answeredQuestions = undefined;
-            });
-	}
+    get editModeMessage() {
+        return 'Click Save at the bottom of the table to finalize changes.'
+    }
+
+    isEditMode = false;
+
+    toggleEditMode(event) {
+        this.isEditMode = !this.isEditMode;
+    }
+
+    @wire(getAnsweredQuestions, { recordId: '$registrationId' })
+    wiredAnswers(result) {
+        this.isLoading = true;
+        this.wiredAnswers = result;
+        if (result.data) {
+            this.answers = result.data;
+            this.error = undefined;
+            this.isLoading = false;
+        } else if (result.error) {
+            this.error = result.error;
+            this.answers = undefined;
+            this.isLoading = false;
+        }
+
+    }
 
 	async handleSave(event) {
+        this.isLoading = true;
+
         // Convert datatable draft values into record objects
         const records = event.detail.draftValues.slice().map((draftValue) => {
             const fields = Object.assign({}, draftValue);
@@ -82,6 +80,7 @@ export default class ApplicationEnrollmentManagerModal extends LightningElement 
 
             // Display fresh data in the datatable
             await this.handleRefreshData();
+            this.isLoading = false;
         } catch (error) {
             this.dispatchEvent(
                 new ShowToastEvent({
@@ -90,6 +89,7 @@ export default class ApplicationEnrollmentManagerModal extends LightningElement 
                     variant: 'error'
                 })
             );
+            this.isLoading = false;
         }
     }
 
@@ -106,8 +106,9 @@ export default class ApplicationEnrollmentManagerModal extends LightningElement 
 	}
 
     handleRefreshData() {
-        console.log('::::: refresh data');
-        this.dispatchEvent(new CustomEvent('refresh'));
+        this.isLoading = true;
+        refreshApex(this.wiredAnswers);
+        this.isLoading = false;
     }
 
 }
